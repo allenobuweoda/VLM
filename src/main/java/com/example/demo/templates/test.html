@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+    <meta charset="UTF-8">
+    <title>VLM TEST WEBSITE</title>
+</head>
+<style>
+    .style-btn{
+        padding: 8px 16px;
+        margin-right:8px;
+        border:1px solid#ccc;
+        background-color: #f5f5f5;
+        cursor:pointer;
+    }
+    .style-btn.active{
+        background-color: #4CAF50;
+        color:white;
+        border-color:#4CAF50;
+        font-weight: bold;
+    }
+</style>
+<body>
+<h2>
+    VLM  img Analysis
+</h2>
+
+<input type="file" id="imageInput" accept="image/*"><br><br>
+<input type="text" id="promptInput" value="这张图片有什么？" style="width:300px;"><br><br>
+<label>系统提示词（System Prompt）：</label><br>
+<textarea id="systemPromptInput"
+          rows="3"
+          style="width: 400px;">
+你是一个专业的图像分析助手，请客观、详细地描述图像内容。
+</textarea>
+<br><br>
+<div>
+    <button class="style-btn active" onclick="setStyle('normal',this)" >普通分析</button>
+    <button  class="style-btn"  onclick="setStyle('detail',this)">详细分析</button>
+    <button class="style-btn" onclick="setStyle('kids',this)">儿童讲解</button>
+</div>
+<br>
+
+<button onclick="send()">
+    SEND
+</button>
+<div id="loading" style="display:none;">
+    ⏳ 正在分析图片，请稍候……
+</div>
+
+
+<pre id="result"></pre>
+
+<script>
+    let currentStyle = 'normal';
+    function setStyle(style,btn){
+        currentStyle = style;
+
+        const buttons = document.querySelectorAll('.style-btn');
+        buttons.forEach(b=>b.classList.remove('active'));
+
+        btn.classList.add('active');
+    }
+
+
+    function send(){
+        const image = document.getElementById("imageInput").files[0];
+        const prompt =document.getElementById("promptInput").value;
+        const systemPrompt = document.getElementById("systemPromptInput").value;
+
+
+        if(!image){
+            alert("choose a picture first!")
+            return;
+        }
+
+
+        document.getElementById("loading").style.display = "block";
+        document.getElementById("result").textContent = "";
+
+
+        const formData=new FormData();
+        formData.append("image",image);
+        formData.append("prompt",prompt);
+        formData.append("systemPrompt", systemPrompt);
+        formData.append("style", currentStyle);
+
+        fetch("http://localhost:8080/analyze",{
+            method:"POST",
+            body:formData
+        })
+            .then(res=> res.text())
+            .then(text=> {
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("result").textContent =text;
+            })
+            .catch(err=>{
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("result").textContent =err;
+            })
+    }
+
+</script>
+
+
+</body>
+</html>
