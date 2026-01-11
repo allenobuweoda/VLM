@@ -1,142 +1,246 @@
 <!DOCTYPE html>
-<html lang="zh-CH">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>VLM TEST WEBSITE</title>
+    <title>VLM Education Assistant</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+
+        /* 按钮样式 */
+        .style-btn {
+            padding: 8px 16px;
+            margin-right: 8px;
+            border: 1px solid #ccc;
+            background-color: #f5f5f5;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .style-btn:hover { background-color: #e0e0e0; }
+        .style-btn.active {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+            font-weight: bold;
+        }
+        /* 教育报告专属按钮样式 */
+        .style-btn.edu-btn {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border-color: #90caf9;
+        }
+        .style-btn.edu-btn.active {
+            background-color: #2196f3;
+            color: white;
+            border-color: #1976d2;
+        }
+
+        /* 布局样式 */
+        .input-group { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 8px; background: #fafafa; }
+        textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 4px; border: 1px solid #ccc; }
+        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; }
+
+        /* 画板样式 */
+        canvas { background-color: white; cursor: crosshair; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        /* 结果展示样式 */
+        #result { background: #f9f9f9; padding: 15px; border-radius: 5px; white-space: pre-wrap; margin-top: 20px; border: 1px solid #eee; }
+
+        /* 报告卡片样式 */
+        .report-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .report-section { margin-bottom: 15px; }
+        .report-label { font-weight: bold; color: #555; display: block; margin-bottom: 5px; }
+        .tag { display: inline-block; background: #e1f5fe; color: #0277bd; padding: 3px 8px; border-radius: 12px; font-size: 0.9em; margin-right: 5px; }
+        .interpretation-box { background: #f9fbe7; padding: 15px; border-left: 5px solid #c0ca33; border-radius: 4px; color: #33691e; }
+    </style>
 </head>
-<style>
-    .style-btn{
-        padding: 8px 16px;
-        margin-right:8px;
-        border:1px solid#ccc;
-        background-color: #f5f5f5;
-        cursor:pointer;
-    }
-    .style-btn.active{
-        background-color: #4CAF50;
-        color:white;
-        border-color:#4CAF50;
-        font-weight: bold;
-    }
-</style>
 <body>
-<h2>
-    VLM  img Analysis
-</h2>
-//新增
-<div style="margin-bottom: 10px;">
-    <label><input type="radio" name="inputMode" value="upload" checked onclick="toggleInput('upload')"> 上传图片</label>
-    <label><input type="radio" name="inputMode" value="draw" onclick="toggleInput('draw')"> 在线绘画 (Web Canvas)</label>
+
+<h2>🎨 AI 绘画分析与教育评估 (VLM Demo)</h2>
+
+<div class="input-group">
+    <div style="margin-bottom: 10px;">
+        <strong>1. 选择输入方式：</strong>
+        <label><input type="radio" name="inputMode" value="upload" checked onclick="toggleInput('upload')"> 上传图片</label>
+        <label><input type="radio" name="inputMode" value="draw" onclick="toggleInput('draw')"> 在线绘画 (Canvas)</label>
+    </div>
+
+    <div id="uploadArea">
+        <input type="file" id="imageInput" accept="image/*">
+    </div>
+
+    <div id="drawArea" style="display:none;">
+        <canvas id="myCanvas" width="500" height="350" style="border:1px solid #ccc;"></canvas>
+        <div style="margin-top:5px;">
+            <button onclick="clearCanvas()" style="font-size: 0.8em;">🧹 清空画板</button>
+            <span style="color:#666; font-size: 0.8em; margin-left: 10px;">* 请在白色区域内自由绘画</span>
+        </div>
+    </div>
 </div>
 
-<div id="drawArea" style="display:none; margin-bottom: 20px;">
-    <canvas id="myCanvas" width="400" height="300" style="border:2px dashed #ccc; cursor: crosshair;"></canvas>
-    <br>
-    <button onclick="clearCanvas()">清空画板</button>
+<div class="input-group">
+    <strong>2. 提示词设置：</strong><br><br>
+    <label>用户问题 (User Prompt):</label>
+    <input type="text" id="promptInput" value="这张画里面有什么？表现了什么特点？"><br><br>
+
+    <label>系统提示词 (System Prompt - 仅在自定义模式生效):</label>
+    <textarea id="systemPromptInput" rows="2">你是一个专业的图像分析助手。</textarea>
 </div>
 
-<div>
+<div class="input-group">
+    <strong>3. 选择分析模式：</strong><br><br>
     <button class="style-btn active" onclick="setStyle('normal',this)">普通分析</button>
     <button class="style-btn" onclick="setStyle('detail',this)">详细分析</button>
     <button class="style-btn" onclick="setStyle('kids',this)">儿童讲解</button>
-    <button class="style-btn" onclick="setStyle('education_report',this)" style="background-color: #e3f2fd; border-color: #2196f3; color: #0d47a1;">🎓 教育评估报告</button>
+    <button class="style-btn edu-btn" onclick="setStyle('education_report',this)">🎓 教育评估报告</button>
 </div>
 
-<input type="file" id="imageInput" accept="image/*"><br><br>
-<input type="text" id="promptInput" value="这张图片有什么？" style="width:300px;"><br><br>
-<label>系统提示词（System Prompt）：</label><br>
-<textarea id="systemPromptInput"
-          rows="3"
-          style="width: 400px;">
-你是一个专业的图像分析助手，请客观、详细地描述图像内容。
-</textarea>
-<br><br>
-<div>
-    <button class="style-btn active" onclick="setStyle('normal',this)" >普通分析</button>
-    <button  class="style-btn"  onclick="setStyle('detail',this)">详细分析</button>
-    <button class="style-btn" onclick="setStyle('kids',this)">儿童讲解</button>
-</div>
-<br>
-
-<div style="padding: 10px; background-color: #f9f9f9; border: 1px solid #eee;">
-    <label><strong>高级分析维度（可多选）：</strong></label><br>
-    <label style="margin-right: 15px; cursor: pointer;">
-        <input type="checkbox" id="checkStyle"> 🎨 分析艺术风格
-    </label>
-    <label style="margin-right: 15px; cursor: pointer;">
-        <input type="checkbox" id="checkEmotion"> 🎭 分析情绪底色
-    </label>
-</div>
-<br>
-
-<button onclick="send()">
-    SEND
+<button onclick="send()" style="padding: 10px 25px; background: #333; color: white; border: none; cursor: pointer; border-radius: 4px; font-size: 16px;">
+    🚀 开始分析 (SEND)
 </button>
-<div id="loading" style="display:none;">
-    ⏳ 正在分析图片，请稍候……
+
+<div id="loading" style="display:none; margin-top: 20px; color: #666;">
+    ⏳ 正在通过 AI 分析画作，请稍候...
 </div>
 
-
-<pre id="result"></pre>
+<div id="result"></div>
 
 <script>
+    // --- 全局状态 ---
     let currentStyle = 'normal';
-    function setStyle(style,btn){
+
+    // --- 画板逻辑 ---
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+
+    // 初始化画布背景为白色（防止透明背景传给 AI 变黑）
+    function initCanvas() {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    initCanvas();
+
+    canvas.addEventListener('mousedown', (e) => { isDrawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); });
+    canvas.addEventListener('mousemove', (e) => {
+        if (isDrawing) {
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'black';
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+        }
+    });
+    canvas.addEventListener('mouseup', () => { isDrawing = false; });
+
+    function clearCanvas() { initCanvas(); }
+
+    function toggleInput(mode) {
+        document.getElementById('uploadArea').style.display = mode === 'upload' ? 'block' : 'none';
+        document.getElementById('drawArea').style.display = mode === 'draw' ? 'block' : 'none';
+    }
+
+    // --- 样式切换 ---
+    function setStyle(style, btn) {
         currentStyle = style;
-
-        const buttons = document.querySelectorAll('.style-btn');
-        buttons.forEach(b=>b.classList.remove('active'));
-
+        document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
     }
 
-
-    function send(){
-        const image = document.getElementById("imageInput").files[0];
-        const prompt =document.getElementById("promptInput").value;
+    // --- 核心发送逻辑 ---
+    function send() {
+        const prompt = document.getElementById("promptInput").value;
         const systemPrompt = document.getElementById("systemPromptInput").value;
+        const mode = document.querySelector('input[name="inputMode"]:checked').value;
 
-        // === 新增：获取复选框状态 ===
-        const needStyle = document.getElementById("checkStyle").checked;
-        const needEmotion = document.getElementById("checkEmotion").checked;
-
-        if(!image){
-            alert("choose a picture first!")
-            return;
-        }
-
-
-        document.getElementById("loading").style.display = "block";
-        document.getElementById("result").textContent = "";
-
-
-        const formData=new FormData();
-        formData.append("image",image);
-        formData.append("prompt",prompt);
+        const formData = new FormData();
+        formData.append("prompt", prompt);
         formData.append("systemPrompt", systemPrompt);
         formData.append("style", currentStyle);
 
-        // === 新增：将复选框状态传给后端 ===
-        formData.append("needStyle", needStyle);
-        formData.append("needEmotion", needEmotion);
-
-        fetch("http://localhost:8080/analyze",{
-            method:"POST",
-            body:formData
-        })
-            .then(res=> res.text())
-            .then(text=> {
-                document.getElementById("loading").style.display = "none";
-                document.getElementById("result").textContent =text;
-            })
-            .catch(err=>{
-                document.getElementById("loading").style.display = "none";
-                document.getElementById("result").textContent =err;
-            })
+        // 处理图片来源
+        if (mode === 'upload') {
+            const imageFile = document.getElementById("imageInput").files[0];
+            if (!imageFile) { alert("请先选择一张图片！"); return; }
+            formData.append("image", imageFile);
+            submitData(formData);
+        } else {
+            // 将 Canvas 转为 Blob
+            canvas.toBlob((blob) => {
+                formData.append("image", blob, "drawing.png");
+                submitData(formData);
+            }, 'image/png');
+        }
     }
 
-</script>
+    function submitData(formData) {
+        document.getElementById("loading").style.display = "block";
+        document.getElementById("result").innerHTML = "";
 
+        fetch("http://localhost:8080/analyze", {
+            method: "POST",
+            body: formData
+        })
+            .then(res => res.text())
+            .then(text => {
+                document.getElementById("loading").style.display = "none";
+
+                // 如果是教育报告模式，尝试解析 JSON 并渲染卡片
+                if (currentStyle === 'education_report') {
+                    try {
+                        const data = JSON.parse(text);
+                        renderReport(data);
+                    } catch (e) {
+                        console.error("JSON Parse Error", e);
+                        document.getElementById("result").textContent = "解析报告失败，原始返回:\n" + text;
+                    }
+                } else {
+                    // 普通模式直接显示文本
+                    document.getElementById("result").textContent = text;
+                }
+            })
+            .catch(err => {
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("result").textContent = "Error: " + err;
+            });
+    }
+
+    // --- 渲染教育评估报告 (PDF Requirement Step 2 & 3) ---
+    function renderReport(data) {
+        // 构建标签 HTML
+        const tagsHtml = data.interest_tags
+            ? data.interest_tags.map(tag => `<span class="tag">${tag}</span>`).join('')
+            : '无';
+
+        const html = `
+            <div class="report-card">
+                <h3 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">📊 绘画心理与兴趣评估报告</h3>
+
+                <div class="report-section">
+                    <span class="report-label">👁️ 画面内容 (Content Description):</span>
+                    <div>${data.content_description || '暂无描述'}</div>
+                </div>
+
+                <div class="report-section">
+                    <span class="report-label">🎭 风格特征 (Stylistic Features):</span>
+                    <div>${data.stylistic_features || '暂无特征'}</div>
+                </div>
+
+                <div class="report-section">
+                    <span class="report-label">🏷️ 兴趣标签 (Interest Tags):</span>
+                    <div style="margin-top:5px;">${tagsHtml}</div>
+                </div>
+
+                <div class="interpretation-box">
+                    <span class="report-label" style="color:#33691e;">💡 潜能与兴趣解读 (Generative Interpretation):</span>
+                    <div style="margin-top:5px;">${data.interest_interpretation || '无法生成解读'}</div>
+                </div>
+            </div>
+        `;
+        document.getElementById("result").innerHTML = html;
+    }
+</script>
 
 </body>
 </html>
