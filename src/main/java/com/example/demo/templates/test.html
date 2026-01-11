@@ -23,6 +23,24 @@
 <h2>
     VLM  img Analysis
 </h2>
+//新增
+<div style="margin-bottom: 10px;">
+    <label><input type="radio" name="inputMode" value="upload" checked onclick="toggleInput('upload')"> 上传图片</label>
+    <label><input type="radio" name="inputMode" value="draw" onclick="toggleInput('draw')"> 在线绘画 (Web Canvas)</label>
+</div>
+
+<div id="drawArea" style="display:none; margin-bottom: 20px;">
+    <canvas id="myCanvas" width="400" height="300" style="border:2px dashed #ccc; cursor: crosshair;"></canvas>
+    <br>
+    <button onclick="clearCanvas()">清空画板</button>
+</div>
+
+<div>
+    <button class="style-btn active" onclick="setStyle('normal',this)">普通分析</button>
+    <button class="style-btn" onclick="setStyle('detail',this)">详细分析</button>
+    <button class="style-btn" onclick="setStyle('kids',this)">儿童讲解</button>
+    <button class="style-btn" onclick="setStyle('education_report',this)" style="background-color: #e3f2fd; border-color: #2196f3; color: #0d47a1;">🎓 教育评估报告</button>
+</div>
 
 <input type="file" id="imageInput" accept="image/*"><br><br>
 <input type="text" id="promptInput" value="这张图片有什么？" style="width:300px;"><br><br>
@@ -37,6 +55,17 @@
     <button class="style-btn active" onclick="setStyle('normal',this)" >普通分析</button>
     <button  class="style-btn"  onclick="setStyle('detail',this)">详细分析</button>
     <button class="style-btn" onclick="setStyle('kids',this)">儿童讲解</button>
+</div>
+<br>
+
+<div style="padding: 10px; background-color: #f9f9f9; border: 1px solid #eee;">
+    <label><strong>高级分析维度（可多选）：</strong></label><br>
+    <label style="margin-right: 15px; cursor: pointer;">
+        <input type="checkbox" id="checkStyle"> 🎨 分析艺术风格
+    </label>
+    <label style="margin-right: 15px; cursor: pointer;">
+        <input type="checkbox" id="checkEmotion"> 🎭 分析情绪底色
+    </label>
 </div>
 <br>
 
@@ -67,6 +96,9 @@
         const prompt =document.getElementById("promptInput").value;
         const systemPrompt = document.getElementById("systemPromptInput").value;
 
+        // === 新增：获取复选框状态 ===
+        const needStyle = document.getElementById("checkStyle").checked;
+        const needEmotion = document.getElementById("checkEmotion").checked;
 
         if(!image){
             alert("choose a picture first!")
@@ -83,6 +115,10 @@
         formData.append("prompt",prompt);
         formData.append("systemPrompt", systemPrompt);
         formData.append("style", currentStyle);
+
+        // === 新增：将复选框状态传给后端 ===
+        formData.append("needStyle", needStyle);
+        formData.append("needEmotion", needEmotion);
 
         fetch("http://localhost:8080/analyze",{
             method:"POST",
